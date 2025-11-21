@@ -4,6 +4,7 @@ import TokenModel from "../../DB/token.models.js";
 //import { decrypt } from "../../Utils/Encryption/encryption.utils.js";
 import { successResponse } from "../../Utils/successResponse.utils.js";
 import  {verifyToken} from "../../Utils/tokens/token.utils.js"
+import { cloudinaryConfig } from "../../Utils/multer/cloudinary.config.js";
 
 export const listAllUsers = async (req,res,next) =>{
 
@@ -36,6 +37,79 @@ export const updateProfile= async (req,res,next) =>{
 
 
 export const profileImage= async (req,res,next) =>{
-    
-  return  successResponse({res , statusCode:200 , message: "Image Updated Successfuly🎉", data:{ file:req.file}})
+
+
+  const {public_id , secure_url} =  await cloudinaryConfig().uploader.upload(req.file.path , {
+   folder : `Sara7aApp/users/${req.user._id}`
+ })
+   const user =  await dbSerivce.findOneAndUpdate({
+     model:UserModel,
+     filter:{_id : req.user._id},
+     data:{  CloudProfileImage : {public_id , secure_url}  }
+    })
+
+    if(req.user.CloudProfileImage ?.public_id){
+      await cloudinaryConfig().uploader.destroy(req.user.CloudProfileImage ?.public_id)
+     }
+  return  successResponse({res , statusCode:200 , message: " Profile Image🎉", data:{user}})
 }
+
+ 
+/*
+
+export const coverImages = async (req,res,next) =>{
+
+  const attachments = [];
+  for( const file of req.files){
+   const {public_id , secure_url} = await cloudinaryConfig().uploader.upload(file.path , {
+   folder : `Sara7aApp/users/${req.user._id}`
+   })
+   attachments.push( {public_id , secure_url});
+  }
+
+    const user =  await dbSerivce.findOneAndUpdate({
+     model:UserModel,
+     filter:{_id : req.user._id},
+     data:{  CloudCoverImage: attachments}
+    })
+  return  successResponse({res , statusCode:200 , message: " Cover Images Updates Sucessfully🎉", data:{ user}})
+}
+
+*/
+
+
+export const coverImages = async (req, res, next) => {
+
+
+  if (req.user.CloudCoverImage && Array.isArray(req.user.CloudCoverImage)) {
+    for (const img of req.user.CloudCoverImage) {
+      if (img.public_id) {
+        await cloudinaryConfig().uploader.destroy(img.public_id);
+      }
+    }
+  }
+
+  const attachments = [];
+  for (const file of req.files) {
+    const { public_id, secure_url } = await cloudinaryConfig().uploader.upload(
+      file.path,
+      {
+        folder: `Sara7aApp/users/${req.user._id}`,
+      }
+    );
+    attachments.push({ public_id, secure_url });
+  }
+
+  const user = await dbSerivce.findOneAndUpdate({
+    model: UserModel,
+    filter: { _id: req.user._id },
+    data: { CloudCoverImage: attachments },
+  });
+
+  return successResponse({
+    res,
+    statusCode: 200,
+    message: "Cover Images Updated Successfully 🎉",
+    data: { user },
+  });
+};

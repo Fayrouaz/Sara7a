@@ -1,4 +1,6 @@
+import joi from "joi";
 import mongoose from "mongoose";
+import { generalFields } from "../../Middleware/validation.middleware.js";
 export const genderEnum = {
   FEMALE: "FEMALE",
   MALE: "MALE"
@@ -7,6 +9,13 @@ export const  providerEnum  = {
   SYSTEM: "SYSTEM",
   GOOGLE: "GOOGLE"
 }
+
+export const roleEnum = {
+  USER: "USER",
+  ADMIN: "ADMIN"
+};
+
+
 
 const  userSchema = new mongoose.Schema({
   firstName:{
@@ -53,7 +62,19 @@ const  userSchema = new mongoose.Schema({
    },
    default :  providerEnum.SYSTEM
   },
+  role:{
+   type:String,
+   enum: {
+    values: Object.values( roleEnum ),
+    message:"{VALUE} is not a vaild  role"
+   },
+   default : roleEnum.USER
+  },
   phone:String,
+  profileImage:String,
+  coverImage:[String],
+  CloudProfileImage:{public_id:String , secure_url : String},
+  CloudCoverImage:[{public_id:String , secure_url : String}],
   confirmEmail:Date,
   confirmEmailOTP:String,
   forgetPasswordOTP:String,
@@ -69,3 +90,19 @@ userSchema.virtual("messages" ,{
 
 export const UserModel = mongoose.models.User || mongoose.model("User",   userSchema );
 export default UserModel;
+export const signupSchema = {
+  body: joi.object({
+    firstName: generalFields.firstName.required(),
+    lastName: generalFields.lastName.required(),
+    email: generalFields.email.required(),
+    password: generalFields.password.required(),
+    confirmPassword: generalFields.confirmPassword,
+    gender: generalFields.gender,
+    phone: generalFields.phone,
+    role: joi.string()
+      .valid("USER", "ADMIN")
+      .default(roleEnum.USER)
+  }
+
+  )
+};

@@ -53,7 +53,7 @@ import { hash, compare } from "../../Utils/Hashing/hashing.utils.js";
 import { successResponse } from "../../Utils/successResponse.utils.js";
 import { eventEmitter } from "../../Utils/Events/email.event.utils.js";
 import { customAlphabet } from 'nanoid';
-import { generateToken, verifyToken } from "../../Utils/tokens/token.utils.js";
+import { generateToken, verifyToken ,getNewLoginCredientional } from "../../Utils/tokens/token.utils.js";
 import { v4 as uuidv4 } from 'uuid';
 import TokenModel from "../../DB/token.models.js";
  import {OAuth2Client} from'google-auth-library';
@@ -120,28 +120,15 @@ export const login = async (req, res, next) => {
    if(!checKUser.confirmEmail)
      return next(new Error("Confirm Your Email ", { cause: 400 }));
   */
-   const accessToken =  generateToken({payload:{id:checKUser._id ,email:checKUser.email},
-    secretKey:process.env.TOKEN_ACCESS_SECRETE,
-    options:{
-      expiresIn:parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN),
-      jwtid:uuidv4(),
-    }
-   })
-
-   const refreshToken =  generateToken({payload:{id:checKUser._id ,email:checKUser.email},
-    secretKey:process.env.TOKEN_RFRESH_SECRETE,
-    options:{
-      expiresIn:parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN),
-      jwtid:uuidv4(),
-    }
-   })
+  
+   const crediontientials = await  getNewLoginCredientional(checKUser)
 
   
   return successResponse({
     res,
     statusCode: 200,
     message: "User Loggedin Successfully👌",
-    data: {accessToken ,refreshToken},
+    data: {crediontientials},
   });
 };
 
@@ -212,28 +199,13 @@ export const logout = async (req, res, next) => {
 
 export const refreshToken = async (req, res, next) => {
 
-   const {refreshtoken}=req.headers;
-
-   const decoded = verifyToken({
-     token:refreshtoken,
-     secretKey:process.env.TOKEN_RFRESH_SECRETE
-   })
-
-
-    const accessToken =  generateToken({payload:{id:decoded.id ,email:decoded.email},
-    secretKey:process.env.TOKEN_ACCESS_SECRETE,
-    options:{
-      expiresIn:parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN),
-      jwtid:uuidv4(),
-    }
-   })
- 
-
+ const user = req.user;
+      const crediontientials = await  getNewLoginCredientional(user)
   return successResponse({
     res,
     statusCode: 200,
     message: "Token Refreshes  Successfully🌏",
-    data:{accessToken}
+    data:{crediontientials}
   });
 };
 
@@ -406,28 +378,14 @@ export const loginWithGmail= async (req, res, next) => {
 
    if(user){
     if(user.provider === providerEnum.GOOGLE){
-  const accessToken =  generateToken({payload:{id: user._id ,email: user.email},
-    secretKey:process.env.TOKEN_ACCESS_SECRETE,
-    options:{
-      expiresIn:parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN),
-      jwtid:uuidv4(),
-    }
-   })
-
-   const refreshToken =  generateToken({payload:{id:user._id ,email:user.email},
-    secretKey:process.env.TOKEN_RFRESH_SECRETE,
-    options:{
-      expiresIn:parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN),
-      jwtid:uuidv4(),
-    }
-   })
+        const crediontientials = await  getNewLoginCredientional(user)
 
   
   return successResponse({
     res,
     statusCode: 200,
     message: "Login successfully✨",
-    data:{accessToken,refreshToken}
+    data:{crediontientials}
   });
     }
   }
@@ -441,28 +399,14 @@ export const loginWithGmail= async (req, res, next) => {
    provider:providerEnum.GOOGLE,
    }]
   })
+        const crediontientials = await  getNewLoginCredientional(newUser)
 
-const accessToken =  generateToken({payload:{id:newUser._id ,email:newUser.email},
-    secretKey:process.env.TOKEN_ACCESS_SECRETE,
-    options:{
-      expiresIn:parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN),
-      jwtid:uuidv4(),
-    }
-   })
-
-   const refreshToken =  generateToken({payload:{id:newUser._id ,email:newUser.email},
-    secretKey:process.env.TOKEN_RFRESH_SECRETE,
-    options:{
-      expiresIn:parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN),
-      jwtid:uuidv4(),
-    }
-   })
 
    return successResponse({
     res,
     statusCode: 200,
     message: "Login successfully✨",
-    data:{accessToken,refreshToken}
+    data:{crediontientials}
   });
 };
 

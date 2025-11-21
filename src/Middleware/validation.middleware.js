@@ -1,6 +1,11 @@
 import joi from "joi"
-import {genderEnum} from "../DB/models/user.model.js"
+//import {genderEnum} from "../DB/models/user.model.js"
 import { Types } from "mongoose";
+
+export const genderEnum = {
+  FEMALE: "FEMALE",
+  MALE: "MALE"
+};
 
   export const validation =(Schema)=>{
     return (req,res,next)=>{
@@ -46,7 +51,18 @@ export const generalFields = {
    Types.ObjectId.isValid(value)||
    helper.message("Invalid ObjectID Format")
    )
-   })
+   }),
+   file : {
+     fieldname : joi.string(),
+   originalname:joi.string(),
+    encoding: joi.string(),
+    mimetype:joi.string(),
+    size : joi.number(),
+    destination: joi.string(),
+    filename:joi.string(),
+    finalPath :joi.string(),
+    path:joi.string(),
+   }
  }
 
 
