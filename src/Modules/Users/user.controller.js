@@ -10,6 +10,7 @@ import { validation } from "../../Middleware/validation.middleware.js";
 import { profileImageSchema ,coverImageSchema  } from "./user.validation.js";
 import {cloudFileUploadMulter} from "../../Utils/multer/cloud.multer.js"
 import { roleEnum } from "../../DB/models/user.model.js";
+import { freezeAccountSchema  ,restoreAccountSchema} from "./user.validation.js";
 const router = Router();
 
 
@@ -48,4 +49,18 @@ validation:[...fileValidation.images]}).array("coverImages" , 4) ,
 */
   cloudFileUploadMulter({validation : [...fileValidation.images]}).array("coverImages" , 5),
 authService.coverImages)
+
+router.delete("{/:userId}/freeze-account" , authentication({tokenType : tokenTypeEnum.ACCESS}),
+  authorization({accesRole :[roleEnum.USER , roleEnum.ADMIN]}),
+  validation(freezeAccountSchema),
+  authService.freezedAccount
+  )
+
+router.patch("{/:userId}/restore-account" , authentication({tokenType : tokenTypeEnum.ACCESS}),
+  authorization({accesRole :[roleEnum.USER , roleEnum.ADMIN]}),
+  validation(restoreAccountSchema),
+  authService.restoreAccount
+  )
+
+
 export default router;

@@ -70,6 +70,10 @@ const  userSchema = new mongoose.Schema({
    },
    default : roleEnum.USER
   },
+  freezeAt:Date,
+  freezedBy:{type:mongoose.Schema.Types.ObjectId , ref:"User"},
+  restoredAt:Date,
+  restoredBy:{type:mongoose.Schema.Types.ObjectId , ref:"User"},
   phone:String,
   profileImage:String,
   coverImage:[String],

@@ -8,16 +8,50 @@ import path from "path";
 import cors from "cors"
 import morgan from "morgan";
 import { attachRouterWithLogger } from "./Logger/logger.utils.js";
-
+import helmet from "helmet";
+import { corsOption } from "./cors/cors.utils.js";
+import {rateLimit} from "express-rate-limit"
 
  const bootstrap = async(app,express) =>{
   app.use(express.json());
-  app.use(cors());
+  app.use(cors(corsOption()));
+app.use(helmet())
+ const Limiter = (rateLimit({
+  windowMs : 5*60*1000,
+  limit:5,
+  message:{
+    statusCode:429,
+    message:"To Many Request ,Please Try again later"
+  },
+  legacyHeaders:true
+}))
+
+  app.use(Limiter);
   await connectDB();
    app.use("/Uploads" ,express.static(path.resolve("./src/Uploads")))
+
   app.get("/" , (req,res)=>{
   return res.status(200).json({message:"Done"})
   });
+
+/*
+ app.get("/test" , (req,res)=>{
+   return res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+ <script>
+  alert("XXS attack");
+</script>
+  
+</body>
+</html>`)
+  });
+*/
 
 attachRouterWithLogger(app ,"/api/v1/auth",authRouter ,"auth.log")
 attachRouterWithLogger(app ,"/api/v1/user",authRouter ,"users.log")
