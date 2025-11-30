@@ -7,7 +7,6 @@ import {authentication, tokenTypeEnum} from "../../Middleware/auth.middleware.js
 import {validation} from "../../Middleware/validation.middleware.js"
 import { confirmEmailSchema, forgetPasswordShema, loginSchema, resetPasswordShema , updatePasswordSchema  } from "./auth.validation.js";
 import { signupSchema } from "../../DB/models/user.model.js";
-import { generateQR } from "../Auth/auth.service.js";
 const router = Router();
 
 
@@ -17,7 +16,6 @@ router.patch( "/confirm-email",validation(confirmEmailSchema) ,authService.confi
 router.post("/revoke-token" ,authentication({tokenType :tokenTypeEnum.ACCESS})  , authService.logout)
 router.post("/refesh-token" , authentication({tokenType :tokenTypeEnum.REFRESH}) ,authService.refreshToken )
 router.patch("/forget-password" , validation(forgetPasswordShema),authService.forgetPassword )
-//update password
 router.patch("/reset-password" , validation(resetPasswordShema),authService.resetPassword )
 router.patch(
   "/update-password",

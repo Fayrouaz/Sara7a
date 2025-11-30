@@ -1,52 +1,4 @@
 
-/*
-import { UserModel } from "../../DB/models/user.model.js";
-//import { asyncHandler } from "../../Utils/asyncHandler.js";
-import { successResponse } from "../../Utils/successResponse.utils.js";
-import * as dbService from "../../DB/dbService.js"
-import { asymmetricEncrypt } from "../../Utils/Encryption/encryption.utils.js";
-import { hash , compare } from "../../Utils/Hashing/hashing.utils.js";
-import { eventEmitter } from "../../Utils/Events/email.event.utils.js";
-
-
-export const signup =async(req,res ,next)=>{
-   const {firstName,lastName,email,password,gender,phone} = req.body;
-   const checKUser = await dbService.findOne({model:UserModel , filter :{email} , })
-    if(checKUser){
-      return next(new Error("User already exists" ,{cause:409}))
-
-    }
-   // const encryptedData= encrypt(phone);
- const encryptedData = asymmetricEncrypt(phone);
- const hashPassword = await hash({plainText:password})
-
-    const user = await dbService.create({model:UserModel , data:{firstName,lastName,email,password : hashPassword ,gender,phone :encryptedData}});
-   
-       eventEmitter.emit("confirmEmail" ,{to:email})
-      return  successResponse({res , statusCode:201 , message: "User created Successfully", data:{user}})
- }
-
-///email
-
-
-export const login =async(req,res ,next)=>{
- 
-   const {email,password} = req.body;
-   const checKUser = await   dbService.findOne({model:UserModel , filter :{email} , })
-    if(!checKUser){
-    return next(new Error("User Not Found" ,{cause:404}))
-    }
-    if(!(await compare({password, hash:checKUser.password})))
-     return next(new Error("Invaild Email or Password",{cause:400} ) )
-   
-      return  successResponse({res , statusCode:200, message: "User Loggedin Successfully", data:{checKUser}})
-
-
-}
-
-*/
-
-
 import {  providerEnum, UserModel } from "../../DB/models/user.model.js";
 import * as dbService from "../../DB/dbService.js";
 import { asymmetricEncrypt } from "../../Utils/Encryption/encryption.utils.js";
@@ -54,8 +6,6 @@ import { hash, compare } from "../../Utils/Hashing/hashing.utils.js";
 import { successResponse } from "../../Utils/successResponse.utils.js";
 import { eventEmitter } from "../../Utils/Events/email.event.utils.js";
 import { customAlphabet } from 'nanoid';
-import { generateToken, verifyToken ,getNewLoginCredientional } from "../../Utils/tokens/token.utils.js";
-import { v4 as uuidv4 } from 'uuid';
 import TokenModel from "../../DB/token.models.js";
  import {OAuth2Client} from'google-auth-library';
 import { authenticator } from "otplib";
@@ -66,10 +16,7 @@ import QRCode from "qrcode";
 
 export const signup =  async (req, res, next) => {
   const { firstName, lastName, email, password,gender,role, phone } = req.body;
-
-
    console.log("REQ BODY:", req.body);
-
   const checKUser = await dbService.findOne({
     model: UserModel,
     filter: { email },
@@ -126,10 +73,6 @@ export const login = async (req, res, next) => {
   if (!(await compare({plainText: password, hash: checKUser.password }))) {
     return next(new Error("Invaild Email or Password", { cause: 400 }));
   }
-/*
-   if(!checKUser.confirmEmail)
-     return next(new Error("Confirm Your Email ", { cause: 400 }));
-  */
   
   if (checKUser.twoFA?.enabled) {
       if (!code) {
@@ -155,139 +98,6 @@ export const login = async (req, res, next) => {
     data: {crediontientials},
   });
 };
-/*
-
-  export const generateQR = async(req,res,next)=>{
-const { id } = req.query; // ناخد الـ id من query
-  if (!id) return res.status(400).send({ success: false, message: "User ID missing" });
-
-  const user = await UserModel.findById(id);
-  if (!user) return res.status(404).send({ success: false, message: "User not found" });
-
-  // توليد secret مؤقت للـ 2FA
-  const tempSecret = authenticator.generateSecret();
-
-  // توليد URI للـ QR code
-  const uri = authenticator.keyuri(user.email, "YourAppName", tempSecret);
-
-  // توليد QR code كـ data URL
-  const image = await QRCode.toDataURL(uri);
-
-  // حفظ الـ tempSecret في قاعدة البيانات مؤقتًا
-  user.twoFA = {
-    ...user.twoFA, // الحفاظ على أي بيانات موجودة
-    tempSecret
-  };
-  await user.save();
-
-return successResponse({
-  res,
-  statusCode: 200,
-  message: "Done",
-  data: {
-    image // الصورة اللي تولدت من QRCode.toDataURL(uri)
-  }
-});
-
-
-
-}
-
-
-export const generateQR = async (req, res) => {
-  
-    const { id } = req.query;
-
-    // 1. التحقق من وجود ID
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID missing"
-      });
-    }
-
-    // 2. التصحيح: استخدام dbService لجلب المستخدم
-    const user = await dbService.findOne({
-      model: UserModel,
-      filter: { _id: id } // البحث بالمعرّف
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    // توليد secret مؤقت للـ 2FA
-    const tempSecret = authenticator.generateSecret();
-
-    // توليد URI للـ QR code (استخدم اسم التطبيق الخاص بك بدلاً من YourAppName)
-    const uri = authenticator.keyuri(user.email, "YourAppName", tempSecret);
-
-    // توليد QR code كـ data URL
-    const image = await QRCode.toDataURL(uri);
-
-    // 3. التصحيح: استخدام dbService لتحديث بيانات المستخدم وحفظ الـ tempSecret
-    await dbService.updateOne({
-      model: UserModel,
-      filter: { _id: id },
-      data: {
-        twoFA: {
-          // الحفاظ على أي بيانات موجودة وتحديث الـ tempSecret
-          ...user.twoFA,
-          tempSecret
-        }
-      }
-    });
-
-    // 4. إرسال الرد بالصورة
-    return successResponse({
-      res,
-      statusCode: 200,
-      message: "QR code generated successfully",
-      data: {
-        image
-      }
-    });
-
-
-};
-
-
-
-export const set2FA = async(req,res , next)=>{
-  const { email, code } = req.body;
-
-  // جلب المستخدم من قاعدة البيانات
-  const user = await UserModel.findOne({ email });
-  if (!user) return next(new Error("User Not Found", { cause: 404 }));
-
-  // التأكد من وجود tempSecret
-  const tempSecret = user.twoFA?.tempSecret;
-  if (!tempSecret) return next(new Error("2FA not initialized for this user", { cause: 400 }));
-
-  // التحقق من الكود
-  const verified = authenticator.check(code, tempSecret);
-  if (!verified) return next(new Error("Invalid 2-step verification code", { cause: 400 }));
-
-  // تفعيل 2FA رسميًا ونقل tempSecret لـ secret
-  user.twoFA = {
-    enabled: true,
-    secret: tempSecret,
-  };
-  await user.save();
-
-  return successResponse({
-    res,
-    statusCode: 200,
-    message: "2FA enabled successfully ✅",
-  });
-
-}
-*/
-
-
 
 export const generateQR = async (req, res, next) => {
   const { id } = req.query;
@@ -296,7 +106,6 @@ export const generateQR = async (req, res, next) => {
     return next(new Error("User ID is missing", { cause: 400 }));
   }
 
-  // get user using dbService
   const user = await dbService.findOne({
     model: UserModel,
     filter: { _id: id },
@@ -306,13 +115,10 @@ export const generateQR = async (req, res, next) => {
     return next(new Error("User Not Found", { cause: 404 }));
   }
 
-  // generate temporary secret
   const tempSecret = authenticator.generateSecret();
 
-  // generate QR code uri
   const uri = authenticator.keyuri(user.email, "YourAppName", tempSecret);
 
-  // generate QR image
   const image = await QRCode.toDataURL(uri);
 
    await UserModel.updateOne(

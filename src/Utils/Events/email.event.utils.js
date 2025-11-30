@@ -1,23 +1,3 @@
-/*
-import { EventEmitter } from "node:events";
-import { emailSubject } from "../Emails/emails.utils.js";
-import { sendEmails } from "../Emails/emails.utils.js"
-
-export const eventEmitter = new EventEmitter();
-
-eventEmitter.on("confirmEmail" ,async(data)=>{
-
-    await sendEmails({to:data.to,
-      subject: emailSubject.confirmEmail,
-      html: "<h1>Please confirm your email </h1> "
-     }).catch((error)=>{
-       console.log(`Error in sending confirmation Email${error}`);
-       
-      });
-
-})*/
-
-
 
 import { EventEmitter } from "node:events";
 import { emailSubject } from "../Emails/emails.utils.js";

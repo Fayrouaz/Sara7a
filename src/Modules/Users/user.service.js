@@ -1,11 +1,10 @@
 import * as dbSerivce from "../../DB/dbService.js"
 import { roleEnum, UserModel } from "../../DB/models/user.model.js"
 import TokenModel from "../../DB/token.models.js";
-//import { decrypt } from "../../Utils/Encryption/encryption.utils.js";
 import { successResponse } from "../../Utils/successResponse.utils.js";
 import  {verifyToken} from "../../Utils/tokens/token.utils.js"
 import { cloudinaryConfig } from "../../Utils/multer/cloudinary.config.js";
-//import { date } from "joi";
+
 
 
 export const listAllUsers = async (req,res,next) =>{
@@ -57,29 +56,6 @@ export const profileImage= async (req,res,next) =>{
 }
 
  
-/*
-
-export const coverImages = async (req,res,next) =>{
-
-  const attachments = [];
-  for( const file of req.files){
-   const {public_id , secure_url} = await cloudinaryConfig().uploader.upload(file.path , {
-   folder : `Sara7aApp/users/${req.user._id}`
-   })
-   attachments.push( {public_id , secure_url});
-  }
-
-    const user =  await dbSerivce.findOneAndUpdate({
-     model:UserModel,
-     filter:{_id : req.user._id},
-     data:{  CloudCoverImage: attachments}
-    })
-  return  successResponse({res , statusCode:200 , message: " Cover Images Updates Sucessfully🎉", data:{ user}})
-}
-
-*/
-
-
 export const coverImages = async (req, res, next) => {
 
 
@@ -145,22 +121,15 @@ export const freezedAccount = async(req,res,next)=>{
 }
 
 
-// في auth.service.js أو في الموديل الخاص بك (UserModel)
+
 
 export const deleteFreezedAccount = async (req, res, next) => {
     const { userId } = req.params;
-
-    // 1. التحقق من الصلاحيات: يجب أن يكون المدير هو من يقوم بهذه العملية.
-    // **ملاحظة:** التحقق من roleEnum.ADMIN سيتم في طبقة الـ Middleware (الـ Router) لتوفير الأمان.
-    // هنا نتأكد فقط من أن المستخدم الذي يقوم بالحذف قد مر بصلاحية المدير.
-
-    // 2. محاولة حذف المستخدم الذي لديه شرط 'freezeAt'
     const deletedUser = await dbSerivce.findOneAndDelete({
         model: UserModel,
         filter: {
-            // نستخدم userId من الـ params لأنه سيتم حذفه بواسطة المدير
             _id: userId,
-            // الشرط الأساسي: يجب أن يكون المستخدم مُجمّدًا (لديه قيمة في freezeAt)
+
             freezeAt: { $exists: true }
         }
     });

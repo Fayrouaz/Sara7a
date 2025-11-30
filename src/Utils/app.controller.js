@@ -34,25 +34,6 @@ app.use(helmet())
   return res.status(200).json({message:"Done"})
   });
 
-/*
- app.get("/test" , (req,res)=>{
-   return res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
- <script>
-  alert("XXS attack");
-</script>
-  
-</body>
-</html>`)
-  });
-*/
-
 attachRouterWithLogger(app ,"/api/v1/auth",authRouter ,"auth.log")
 attachRouterWithLogger(app ,"/api/v1/user",authRouter ,"users.log")
 attachRouterWithLogger(app ,"/api/v1/message",authRouter ,"message.log")

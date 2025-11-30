@@ -1,5 +1,4 @@
 import joi from "joi"
-//import {genderEnum} from "../DB/models/user.model.js"
 import { Types } from "mongoose";
 
 export const genderEnum = {
