@@ -10,7 +10,12 @@ import { validation } from "../../Middleware/validation.middleware.js";
 import { profileImageSchema ,coverImageSchema  } from "./user.validation.js";
 import {cloudFileUploadMulter} from "../../Utils/multer/cloud.multer.js"
 import { roleEnum } from "../../DB/models/user.model.js";
-import { freezeAccountSchema  ,restoreAccountSchema} from "./user.validation.js";
+import { freezeAccountSchema  ,restoreAccountSchema ,deleteAccountSchema } from "./user.validation.js";
+//import { generateQR } from "../Auth/auth.service.js"; // ./user.service.js موجود في نفس الفولدر
+
+import { deleteFreezedAccount } from './user.service.js'; // تأكد من الاستيراد الصحيح
+
+
 const router = Router();
 
 
@@ -56,11 +61,21 @@ router.delete("{/:userId}/freeze-account" , authentication({tokenType : tokenTyp
   authService.freezedAccount
   )
 
+router.delete(
+    "/:userId/delete-freezed-account",
+    authentication({ tokenType: tokenTypeEnum.ACCESS }),
+    // **هام:** الصلاحية محددة هنا بـ [roleEnum.ADMIN] فقط.
+    authorization({ accesRole: [roleEnum.ADMIN] }),
+    validation(deleteAccountSchema),
+    deleteFreezedAccount
+);
+
 router.patch("{/:userId}/restore-account" , authentication({tokenType : tokenTypeEnum.ACCESS}),
   authorization({accesRole :[roleEnum.USER , roleEnum.ADMIN]}),
   validation(restoreAccountSchema),
   authService.restoreAccount
   )
+
 
 
 export default router;

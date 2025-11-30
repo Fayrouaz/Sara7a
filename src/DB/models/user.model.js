@@ -16,6 +16,13 @@ export const roleEnum = {
 };
 
 
+const twoFASchema = new mongoose.Schema({
+  enabled: { type: Boolean, default: false },
+  secret: { type: String, default: "" },
+  tempSecret: { type: String, default: null }
+}, { _id: false }); // مهم جدًا
+
+
 
 const  userSchema = new mongoose.Schema({
   firstName:{
@@ -83,6 +90,9 @@ const  userSchema = new mongoose.Schema({
   confirmEmailOTP:String,
   forgetPasswordOTP:String,
  forgetPasswordOTPExpire: Date,
+twoFA: { type: twoFASchema, default: () => ({}) },
+
+
 },
 {timestamps:true  , toJSON: {virtuals:true} , toObject:{virtuals:true}})
 
@@ -103,10 +113,12 @@ export const signupSchema = {
     confirmPassword: generalFields.confirmPassword,
     gender: generalFields.gender,
     phone: generalFields.phone,
-    role: joi.string()
+    role: joi.string().uppercase()
       .valid("USER", "ADMIN")
-      .default(roleEnum.USER)
+      .default(roleEnum.USER).optional()
   }
 
   )
 };
+
+

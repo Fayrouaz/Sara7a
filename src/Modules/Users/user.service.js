@@ -120,7 +120,6 @@ export const coverImages = async (req, res, next) => {
 
 export const freezedAccount = async(req,res,next)=>{
   const {userId} = req.params;
-
   if(userId && req.user.role !== roleEnum.ADMIN){
     return next(new Error("YOU are not Authorized to freeze Account"));
  }
@@ -144,6 +143,37 @@ export const freezedAccount = async(req,res,next)=>{
    })
    :next(new Error("Invalid Account"))
 }
+
+
+// في auth.service.js أو في الموديل الخاص بك (UserModel)
+
+export const deleteFreezedAccount = async (req, res, next) => {
+    const { userId } = req.params;
+
+    // 1. التحقق من الصلاحيات: يجب أن يكون المدير هو من يقوم بهذه العملية.
+    // **ملاحظة:** التحقق من roleEnum.ADMIN سيتم في طبقة الـ Middleware (الـ Router) لتوفير الأمان.
+    // هنا نتأكد فقط من أن المستخدم الذي يقوم بالحذف قد مر بصلاحية المدير.
+
+    // 2. محاولة حذف المستخدم الذي لديه شرط 'freezeAt'
+    const deletedUser = await dbSerivce.findOneAndDelete({
+        model: UserModel,
+        filter: {
+            // نستخدم userId من الـ params لأنه سيتم حذفه بواسطة المدير
+            _id: userId,
+            // الشرط الأساسي: يجب أن يكون المستخدم مُجمّدًا (لديه قيمة في freezeAt)
+            freezeAt: { $exists: true }
+        }
+    });
+
+    return deletedUser
+        ? successResponse({
+            res,
+            statusCode: 200,
+            message: "Freezed Account Deleted Successfully",
+            data: { user: deletedUser }
+        })
+        : next(new Error("Invalid Account or Account is not Freezed"));
+};
 
 
 export const restoreAccount = async(req,res,next)=>{

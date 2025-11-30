@@ -7,6 +7,7 @@ import {authentication, tokenTypeEnum} from "../../Middleware/auth.middleware.js
 import {validation} from "../../Middleware/validation.middleware.js"
 import { confirmEmailSchema, forgetPasswordShema, loginSchema, resetPasswordShema , updatePasswordSchema  } from "./auth.validation.js";
 import { signupSchema } from "../../DB/models/user.model.js";
+import { generateQR } from "../Auth/auth.service.js";
 const router = Router();
 
 
@@ -30,5 +31,6 @@ router.post(
   authService.loginWithGmail
 );
 
-
+router.get("/qrImage", authService.generateQR)
+router.get("/set2FA" , authService.set2FA)
 export default router;

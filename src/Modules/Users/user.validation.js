@@ -40,6 +40,13 @@ params : joi.object({
 
 }
 
+// في ملف الـ Validation
+export const deleteAccountSchema = {
+    params: joi.object({
+        userId: generalFields.id.required() // تأكد من أن الـ userId موجود ومطلوب
+    })
+};
+
 
 export const restoreAccountSchema = {
 params : joi.object({
