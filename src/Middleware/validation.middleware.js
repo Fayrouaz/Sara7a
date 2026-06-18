@@ -41,9 +41,7 @@ export const generalFields = {
   }),
   email:joi.string().email({minDomainSegments:2 , maxDomainSegments:5 ,tlds:{ allow :["com" ,"org" ,"io"]}}),
   password:joi.string(),
-  confirmPassword:joi.ref("password"),
-  gender:joi.string().valid(...Object.values(genderEnum)).default(genderEnum.MALE),
-  phone:joi.string().pattern(new RegExp(/^01[0125][0-9]{8}$/)),
+
   otp:joi.string(),
   id:joi.string().custom((value,helper) =>{
    return (
@@ -52,8 +50,8 @@ export const generalFields = {
    )
    }),
    file : {
-     fieldname : joi.string(),
-   originalname:joi.string(),
+    fieldname : joi.string(),
+    originalname:joi.string(),
     encoding: joi.string(),
     mimetype:joi.string(),
     size : joi.number(),

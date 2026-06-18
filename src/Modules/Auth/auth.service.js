@@ -1,66 +1,63 @@
 
-import {  providerEnum, UserModel } from "../../DB/models/user.model.js";
-import * as dbService from "../../DB/dbService.js";
-import { asymmetricEncrypt } from "../../Utils/Encryption/encryption.utils.js";
-import { hash, compare } from "../../Utils/Hashing/hashing.utils.js";
-import { successResponse } from "../../Utils/successResponse.utils.js";
-import { eventEmitter } from "../../Utils/Events/email.event.utils.js";
+import { OAuth2Client } from 'google-auth-library';
 import { customAlphabet } from 'nanoid';
+import * as dbService from "../../DB/dbService.js";
+import { providerEnum, UserModel } from "../../DB/models/user.model.js";
 import TokenModel from "../../DB/token.models.js";
- import {OAuth2Client} from'google-auth-library';
-import { authenticator } from "otplib";
-import QRCode from "qrcode";
+import { eventEmitter } from "../../Utils/Events/email.event.utils.js";
+import { compare, hash } from "../../Utils/Hashing/hashing.utils.js";
+import { successResponse } from "../../Utils/successResponse.utils.js";
+import { getNewLoginCredientional } from "../../Utils/tokens/token.utils.js";
 
 
 
 
-export const signup =  async (req, res, next) => {
-  const { firstName, lastName, email, password,gender,role, phone } = req.body;
-   console.log("REQ BODY:", req.body);
+export const signup = async (req, res, next) => {
+  const { username, email, password } = req.body;
+  const [firstName, ...rest] = username.trim().split(" ");
+  const lastName = rest.join(" ");
+
   const checKUser = await dbService.findOne({
     model: UserModel,
     filter: { email },
   });
 
   if (checKUser) {
-    return next(new Error("User already exists🤷‍♂️", { cause: 409 }));
+    return next(new Error("User already exists", { cause: 409 }));
   }
 
-  const encryptedData = asymmetricEncrypt(phone);
   const hashPassword = await hash({ plainText: password });
-    
-
-  const otp = customAlphabet("0123456789ersdofdfdmdfdds" ,6)();
   const user = await dbService.create({
     model: UserModel,
-    data:[{
-     firstName, 
-     lastName,
-     email,
-     password: hashPassword, 
-     confirmEmailOTP:await hash({plainText:otp}),
-     gender,
-     role,
-     phone: encryptedData }],
-     
+    data: [{ firstName, lastName, email, password: hashPassword }],
   });
 
-  eventEmitter.emit("confirmEmail", { to: email  ,otp,firstName });
+  const actualUser = Array.isArray(user) ? user[0] : user;
+  const tokens = await getNewLoginCredientional(actualUser);
 
   return successResponse({
     res,
-    statusCode: 200,
-    message: "User created Successfully🎉",
-    data: { user },
+    statusCode: 201,
+    message: "User created Successfully",
+    data: {
+      user: {
+        id: actualUser._id,
+        email: actualUser.email,
+        displayName: actualUser.displayName ?? `${firstName} ${lastName}`.trim(),
+      },
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: 3600,                // ✅ matches login shape
+      },
+    },
   });
 };
-
-
 
 
 
 export const login = async (req, res, next) => {
-  const { email, password   , code} = req.body;
+  const { email, password } = req.body;
   const checKUser = await dbService.findOne({
     model: UserModel,
     filter: { email },
@@ -70,161 +67,48 @@ export const login = async (req, res, next) => {
     return next(new Error("User Not Found", { cause: 404 }));
   }
 
-  if (!(await compare({plainText: password, hash: checKUser.password }))) {
+  if (!(await compare({ plainText: password, hash: checKUser.password }))) {
     return next(new Error("Invaild Email or Password", { cause: 400 }));
   }
-  
-  if (checKUser.twoFA?.enabled) {
-      if (!code) {
-        return res.status(200).json({
-          codeRequested: true,
-          message: "2-step verification code required",
-        });
-      }
 
-      const verified = authenticator.check(code, checKUser.twoFA.secret);
-      if (!verified) {
-        return next(new Error("Invalid 2-step verification code", { cause: 400 }));
-      }
-    }
 
-   const crediontientials = await  getNewLoginCredientional(checKUser)
 
-  
-  return successResponse({
-    res,
-    statusCode: 200,
-    message: "User Loggedin Successfully👌",
-    data: {crediontientials},
-  });
-};
-
-export const generateQR = async (req, res, next) => {
-  const { id } = req.query;
-
-  if (!id) {
-    return next(new Error("User ID is missing", { cause: 400 }));
-  }
-
-  const user = await dbService.findOne({
-    model: UserModel,
-    filter: { _id: id },
-  });
-
-  if (!user) {
-    return next(new Error("User Not Found", { cause: 404 }));
-  }
-
-  const tempSecret = authenticator.generateSecret();
-
-  const uri = authenticator.keyuri(user.email, "YourAppName", tempSecret);
-
-  const image = await QRCode.toDataURL(uri);
-
-   await UserModel.updateOne(
-    { _id: id },
-    { $set: { "twoFA.tempSecret": tempSecret } }
-  );
+  const credentials = await getNewLoginCredientional(checKUser);
 
   return successResponse({
     res,
-    statusCode: 200,
-    message: "QR code generated successfully",
-    data: { image },
+    message: "Login successful",
+    data: {
+      user: {
+        id: checKUser._id,
+        email: checKUser.email,
+        displayName: checKUser.displayName,
+      },
+      tokens: {
+        accessToken: credentials.accessToken,
+        refreshToken: credentials.refreshToken,
+        expiresIn: 3600,
+      },
+    },
   });
 };
-
-
-export const set2FA = async (req, res, next) => {
-  const { email, code } = req.body;
-
-  const user = await UserModel.findOne({ email });
-  if (!user) return next(new Error("User Not Found", { cause: 404 }));
-
-  console.log("USER FROM DB:", user.twoFA);
-
-  const tempSecret = user.twoFA?.tempSecret;
-
-  if (!tempSecret) {
-    return next(new Error("2FA not initialized", { cause: 400 }));
-  }
-
-  const verified = authenticator.check(code, tempSecret);
-  if (!verified) {
-    return next(new Error("Invalid 2-step verification code", { cause: 400 }));
-  }
-
-  user.twoFA = {
-    enabled: true,
-    secret: tempSecret,
-    tempSecret: null,
-  };
-
-  await user.save();
-
-  return successResponse({
-    res,
-    statusCode: 200,
-    message: "2FA enabled successfully",
-  });
-};
-
-
-
-
-
-
-export const confirmEmail = async (req, res, next) => {
-  const { email, otp } = req.body;
-  const checKUser = await dbService.findOne({
-    model: UserModel,
-    filter: { email  , confirmEmail:{$exists:false},confirmEmailOTP:{$exists:true}},
-  });
-
-  if (!checKUser) {
-    return next(new Error("User Not Found or email already confirmed", { cause: 404 }));
-  }
-
-  if (!(await compare({plainText: otp, hash: checKUser.confirmEmailOTP}))) {
-    return next(new Error("Invaild OTP", { cause: 400 }));
-  }
-  await dbService.updateOne({
-    model: UserModel,
-    filter: { email },
-    data:{
-     confirmEmail:Date.now(),
-     $unset:{confirmEmailOTP:1},
-     $inc:{__v: 1 }
-    }
-  })
-
-  return successResponse({
-    res,
-    statusCode: 200,
-    message: "Email Confirmed  Successfully✨",
-   
-  });
-};
-
-
-
 
 export const logout = async (req, res, next) => {
 
- const token=await dbService.findOne({
-   model:TokenModel,
-  filter:{jwtid:req.decoded.jti}
-   })
+  const token = await dbService.findOne({
+    model: TokenModel,
+    filter: { jwtid: req.decoded.jti }
+  })
 
-   if(token)    return next(new Error("Token is Revoked" ,{cause:400}));
+  if (token) return next(new Error("Token is Revoked", { cause: 400 }));
 
- await dbService.create({
-  model:TokenModel,
-   data:[{
-    jwtid:req.decoded.jti,
-    expiresIn:new Date(req.decoded.exp *1000),
-    userId:req.user._id
-   }]
+  await dbService.create({
+    model: TokenModel,
+    data: [{
+      jwtid: req.decoded.jti,
+      expiresIn: new Date(req.decoded.exp * 1000),
+      userId: req.user._id
+    }]
   })
 
 
@@ -232,7 +116,7 @@ export const logout = async (req, res, next) => {
     res,
     statusCode: 200,
     message: "Logged out  Successfully🌏",
-   
+
   });
 };
 
@@ -240,51 +124,22 @@ export const logout = async (req, res, next) => {
 
 export const refreshToken = async (req, res, next) => {
 
- const user = req.user;
-      const crediontientials = await  getNewLoginCredientional(user)
+  const user = req.user;
+  const crediontientials = await getNewLoginCredientional(user)
   return successResponse({
     res,
     statusCode: 200,
     message: "Token Refreshes  Successfully🌏",
-    data:{crediontientials}
+    data: { crediontientials }
   });
 };
 
-/*
-export const forgetPassword= async (req, res, next) => {
-  const {email} =req.body;
-  const otp = await customAlphabet("0123456789dddfgffv" , 6)();
 
 
-  const user = await dbService.findOneAndUpdate({
-   model:UserModel,
-   filter:{
-    email,
-   confirmEmail:{$exists :true},  
-   },
-    
-    data:{
-    forgetPasswordOTP:await hash({plainText:otp})
-    },
-  }
-   )
 
- 
-   if(!user) return next(new Error("User NOT Found oR Email not confirmed" ,{cause:404}))
 
-    eventEmitter.emit("forgetPassword" , {
-     to:email,
-     firstName:user.firstName,
-     otp,
-    })
 
-  return successResponse({
-    res,
-    statusCode: 200,
-    message: "Check Your Box 🔵",
 
-  });
-};*/
 
 export const forgetPassword = async (req, res, next) => {
   const { email } = req.body;
@@ -297,7 +152,7 @@ export const forgetPassword = async (req, res, next) => {
     model: UserModel,
     filter: {
       email,
-      confirmEmail: { $exists: true },
+      //confirmEmail: { $exists: true },
     },
     data: {
       forgetPasswordOTP: await hash({ plainText: otp }),
@@ -328,63 +183,106 @@ export const forgetPassword = async (req, res, next) => {
 
 
 
-export const  resetPassword= async (req, res, next) => {
-  const {email  ,otp , password} =req.body;
- 
- 
-  const user= await dbService.findOne({
-   model:UserModel,
-   email,
-    confirmEmail:{$exists :true}
-  })
-    if (!user.forgetPasswordOTP || user.forgetPasswordOTPExpire < Date.now()) {
-   return next(new Error("OTP expired, please request a new one", { cause: 400 }));
-}
 
-  if(!user) return next(new Error("Invliad-Account" ,{cause:404}))  
-  if(!await compare({plainText:otp , hash:user.forgetPasswordOTP}))  return next(new Error("Invlaid OTP" ,{cause:400}))
 
-    await dbService.updateOne({
-      model:UserModel,
-      filter:{email},
-      data:{
-       password:await hash({plainText:password}),
-       $unset:{forgetPasswordOTP:true},
-       $inc:{__v:1}
-      }
-    })
+
+
+
+//    model:UserModel,
+//    email,
+//     //confirmEmail:{$exists :true}
+//   })
+
+
+//     if (!user.forgetPasswordOTP || user.forgetPasswordOTPExpire < Date.now()) {
+//    return next(new Error("OTP expired, please request a new one", { cause: 400 }));
+// }
+
+//   if(!user) return next(new Error("Invliad-Account" ,{cause:404}))  
+//   if(!await compare({plainText:otp , hash:user.forgetPasswordOTP}))  return next(new Error("Invlaid OTP" ,{cause:400}))
+
+//     await dbService.updateOne({
+//       model:UserModel,
+//       filter:{email},
+//       data:{
+//        password:await hash({plainText:password}),
+//        $unset:{forgetPasswordOTP:true},
+//        $inc:{__v:1}
+//       }
+//     })
+
+
+//   return successResponse({
+//     res,
+//     statusCode: 200,
+//     message: "Password Reseted successfully🔵",
+
+//   });
+// };
+export const resetPassword = async (req, res, next) => {
+  const { email, otp, password } = req.body;
+
+  const user = await dbService.findOne({
+    model: UserModel,
+    filter: { email: email.toLowerCase().trim() }
+  });
+
+  if (!user) return next(new Error("Invalid-Account", { cause: 404 }));
+
+
+  if (!user.forgetPasswordOTP || user.forgetPasswordOTPExpire < Date.now()) {
+    return next(new Error("OTP expired, please request a new one", { cause: 400 }));
+  }
+
+  const isMatch = await compare({ plainText: otp, hash: user.forgetPasswordOTP });
+  if (!isMatch) return next(new Error("Invalid OTP", { cause: 400 }));
+
+
+  const hashedPassword = await hash({ plainText: password });
+
+  const updatedUser = await dbService.findOneAndUpdate({
+    model: UserModel,
+    filter: { email: email.toLowerCase().trim() },
+    data: {
+      $set: { password: hashedPassword },
+      $unset: { forgetPasswordOTP: 0, forgetPasswordOTPExpire: 0 },
+      $inc: { __v: 1 }
+    },
+    options: { new: true }
+  });
+
+  if (!updatedUser) return next(new Error("Update Failed", { cause: 500 }));
+
   return successResponse({
     res,
     statusCode: 200,
-    message: "Password Reseted successfully🔵",
-
+    message: "Password Reset successfully ✅",
   });
 };
 
 
 
-
 export const updatePassword = async (req, res, next) => {
 
-    const { oldPassword, newPassword } = req.body;
-    const userId = req.user._id;
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return next(new Error("User not found", { cause: 404 }));
-    }
-    const isCorrectPassword = await compare({
-      plainText: oldPassword,
-      hash: user.password,
-    });
-    if (!isCorrectPassword) {
-      return next(new Error("Old password is incorrect", { cause: 400 }));
-    }
-    const hashedPassword = await hash({ plainText: newPassword });
-    await UserModel.findByIdAndUpdate(userId, {
-      password: hashedPassword,
-    });
+  const { oldPassword, newPassword } = req.body;
+  const userId = req.user._id;
+  const user = await UserModel.findById(userId);
+  if (!user) {
+    return next(new Error("User not found", { cause: 404 }));
+  }
+  const isCorrectPassword = await compare({
+    plainText: oldPassword,
+    hash: user.password,
+  });
+  if (!isCorrectPassword) {
+    return next(new Error("Old password is incorrect", { cause: 400 }));
+  }
+  const hashedPassword = await hash({ plainText: newPassword });
+  await UserModel.findByIdAndUpdate(userId, {
+    password: hashedPassword,
+  });
 
-   return successResponse({
+  return successResponse({
     res,
     statusCode: 200,
     message: "Password Updated successfully🔵",
@@ -392,71 +290,97 @@ export const updatePassword = async (req, res, next) => {
   });
 };
 
- async function verifyGooogleAccount({idToken}){
-const client = new OAuth2Client();
+
+
+async function verifyGooogleAccount({ idToken }) {
+  const client = new OAuth2Client();
   const ticket = await client.verifyIdToken({
-      idToken,
-      audience:process.env.CLIENT_ID
+    idToken,
+    audience: process.env.CLIENT_ID
   });
-    const payload = ticket.getPayload();
+  const payload = ticket.getPayload();
 
-     return payload;
- }
+  return payload;
+}
 
 
-export const loginWithGmail= async (req, res, next) => {
+export const loginWithGmail = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
 
-  const {idToken} =req.body;
+    const { email, family_name, email_verified, given_name } =
+      await verifyGooogleAccount({ idToken });
 
- const {email , family_name,email_verified , given_name}= await verifyGooogleAccount({idToken})
-  await verifyGooogleAccount({idToken}) 
-   if(!email_verified) return next(new Error("Email Not verified" ,{cause:401}));
-
-   const user= await dbService.findOne({
-    model: UserModel,
-    filter:{email},
-  })
-
-   if(user){
-    if(user.provider === providerEnum.GOOGLE){
-        const crediontientials = await  getNewLoginCredientional(user)
-
-  
-  return successResponse({
-    res,
-    statusCode: 200,
-    message: "Login successfully✨",
-    data:{crediontientials}
-  });
+    if (email_verified !== true) {
+      return next(new Error("Email Not verified", { cause: 401 }));
     }
+
+    const user = await dbService.findOne({
+      model: UserModel,
+      filter: { email },
+    });
+
+    if (user) {
+      if (user.provider === providerEnum.GOOGLE) {
+        const credentials = await getNewLoginCredientional(user);
+
+        return successResponse({
+          res,
+          statusCode: 200,
+          message: "Login successfully",
+          data: {
+            user: {
+              id: user._id.toString(),
+              email: user.email,
+              emailVerified: user.emailVerified ?? true,
+            },
+            tokens: {
+              accessToken: credentials.accessToken,
+              refreshToken: credentials.refreshToken,
+              expiresIn: credentials.expiresIn ?? 3600,
+            },
+          },
+        });
+      } else {
+        return next(
+          new Error("Please login using your original provider", { cause: 400 })
+        );
+      }
+    }
+
+    const newUser = await dbService.create({
+      model: UserModel,
+      data: {
+        firstName: given_name,
+        lastName: family_name,
+        email,
+        provider: providerEnum.GOOGLE,
+      },
+    });
+
+    const credentials = await getNewLoginCredientional(newUser);
+
+    return successResponse({
+      res,
+      statusCode: 200,
+      message: "Login successfully✨",
+      data: {
+        user: {
+          id: newUser._id.toString(),
+          email: newUser.email,
+          emailVerified: newUser.emailVerified ?? true,
+        },
+        tokens: {
+          accessToken: credentials.accessToken,
+          refreshToken: credentials.refreshToken,
+          expiresIn: credentials.expiresIn ?? 3600,
+        },
+      },
+    });
+
+  } catch (err) {
+    console.log("=== ERROR ===");
+    console.log(err.message);
+    return next(err);
   }
-  const newUser=await dbService.create({
-   model:UserModel,
-   data:[{
-   firstName:given_name,
-   lastName:family_name,
-   email,
-   confirmEmail:Date.now(),
-   provider:providerEnum.GOOGLE,
-   }]
-  })
-        const crediontientials = await  getNewLoginCredientional(newUser)
-
-
-   return successResponse({
-    res,
-    statusCode: 200,
-    message: "Login successfully✨",
-    data:{crediontientials}
-  });
 };
-
-//email , family_name,email_verified , given_name,  picture
-//  family_name
-/*
-//  email_verified
-
-  name
-  picture
-  given_name
-  family_name*/

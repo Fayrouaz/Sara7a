@@ -1,5 +1,5 @@
 {
-  "name": "sara7a",
+  "name": "leafdetectapp",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,13 +11,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.13.5",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "chalk": "^5.6.2",
     "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0",
+    "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "google-auth-library": "^10.5.0",
     "helmet": "^8.1.0",
@@ -31,5 +32,13 @@
     "otplib": "^12.0.1",
     "qrcode": "^1.5.4",
     "uuid": "^13.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fayrouaz/Sara7a.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Fayrouaz/Sara7a/issues"
+  },
+  "homepage": "https://github.com/Fayrouaz/Sara7a#readme"
 }

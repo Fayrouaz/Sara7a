@@ -17,7 +17,7 @@ export const template = (code, firstName  ,subject) => `<!DOCTYPE html>
       overflow: hidden;
     }
     .email-header {
-      background-color: #007BFF;
+      background-color: #3CD070;
       color: #ffffff;
       text-align: center;
       padding: 20px;
@@ -33,11 +33,11 @@ export const template = (code, firstName  ,subject) => `<!DOCTYPE html>
     }
     .email-body h2 {
       margin-top: 0;
-      color: #007BFF;
+      color: #3CD070;
     }
     .activation-button {
       display: inline-block;
-      background-color: #007BFF;
+      background-color: #3CD070;
       color: #ffffff !important;
       text-decoration: none;
       padding: 10px 20px;
@@ -46,7 +46,7 @@ export const template = (code, firstName  ,subject) => `<!DOCTYPE html>
       margin: 20px 0;
     }
     .activation-button:hover {
-      background-color: #0056b3;
+      background-color: #3CD070;
     }
     .email-footer {
       text-align: center;
@@ -56,7 +56,7 @@ export const template = (code, firstName  ,subject) => `<!DOCTYPE html>
       color: #777777;
     }
     .email-footer a {
-      color: #007BFF;
+      color: #3CD070;
       text-decoration: none;
     }
   </style>
@@ -68,13 +68,13 @@ export const template = (code, firstName  ,subject) => `<!DOCTYPE html>
     </div>
     <div class="email-body">
       <h2>Hello ${firstName},</h2>
-      <p>Thank you for signing up with Route Academy. To complete your registration and start using your account, please get code to activate your account:</p>
+      <p> We received a request to reset the password for your account. Please use the following code to proceed with resetting your password:</p>
       <h2 class="activation-button">${code}</h2>
       <p>If you did not sign up for this account, please ignore this email.</p>
-      <p>Best regards,<br>Sara7a Application Team</p>
+      <p>Best regards,<br>Leaf Detect Application Team</p>
     </div>
     <div class="email-footer">
-      <p>&copy; 2024 Route Academy. All rights reserved.</p>
+      <p>&copy; 2026 Leaf Dectect. All rights reserved.</p>
       <p><a href="[SupportLink]">Contact Support</a> | <a href="[UnsubscribeLink]">Unsubscribe</a></p>
     </div>
   </div>

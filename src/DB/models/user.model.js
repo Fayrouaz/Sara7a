@@ -1,10 +1,7 @@
 import joi from "joi";
 import mongoose from "mongoose";
 import { generalFields } from "../../Middleware/validation.middleware.js";
-export const genderEnum = {
-  FEMALE: "FEMALE",
-  MALE: "MALE"
-}
+
 export const  providerEnum  = {
   SYSTEM: "SYSTEM",
   GOOGLE: "GOOGLE"
@@ -16,11 +13,7 @@ export const roleEnum = {
 };
 
 
-const twoFASchema = new mongoose.Schema({
-  enabled: { type: Boolean, default: false },
-  secret: { type: String, default: "" },
-  tempSecret: { type: String, default: null }
-}, { _id: false }); // مهم جدًا
+
 
 
 
@@ -53,14 +46,7 @@ const  userSchema = new mongoose.Schema({
    },
 
   },
-  gender:{
-   type:String,
-   enum: {
-    values: Object.values(genderEnum),
-    message:"{VALUE} is not a vaild gender "
-   },
-   default : genderEnum.MALE
-  },
+
   provider:{
    type:String,
    enum: {
@@ -77,48 +63,43 @@ const  userSchema = new mongoose.Schema({
    },
    default : roleEnum.USER
   },
-  freezeAt:Date,
-  freezedBy:{type:mongoose.Schema.Types.ObjectId , ref:"User"},
-  restoredAt:Date,
-  restoredBy:{type:mongoose.Schema.Types.ObjectId , ref:"User"},
-  phone:String,
   profileImage:String,
-  coverImage:[String],
   CloudProfileImage:{public_id:String , secure_url : String},
-  CloudCoverImage:[{public_id:String , secure_url : String}],
-  confirmEmail:Date,
-  confirmEmailOTP:String,
   forgetPasswordOTP:String,
- forgetPasswordOTPExpire: Date,
-twoFA: { type: twoFASchema, default: () => ({}) },
+  forgetPasswordOTPExpire: Date,
+
 
 
 },
 {timestamps:true  , toJSON: {virtuals:true} , toObject:{virtuals:true}})
 
-userSchema.virtual("messages" ,{
-  localField:"_id",
-  foreignField:"receiverId",
-  ref:"Message"
- })
+
+
+
+userSchema.pre("save", function(next) {
+  if (this.username) {
+    const parts = this.username.trim().split(" ");
+    this.firstName = parts[0];
+    this.lastName = parts.slice(1).join(" ") || parts[0];
+  }
+  next();
+});
 
 export const UserModel = mongoose.models.User || mongoose.model("User",   userSchema );
 export default UserModel;
+
 export const signupSchema = {
   body: joi.object({
-    firstName: generalFields.firstName.required(),
-    lastName: generalFields.lastName.required(),
+    username: joi.string()
+      .min(5)
+      .max(41)
+      .pattern(/^[\p{Script=Arabic}a-zA-Z\s]+$/u)  
+      .required()
+      .messages({
+        'string.pattern.base': 'Username must contain first and last name separated by a space'
+      }),
     email: generalFields.email.required(),
     password: generalFields.password.required(),
-    confirmPassword: generalFields.confirmPassword,
-    gender: generalFields.gender,
-    phone: generalFields.phone,
-    role: joi.string().uppercase()
-      .valid("USER", "ADMIN")
-      .default(roleEnum.USER).optional()
-  }
-
-  )
+  })
 };
-
 

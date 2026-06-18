@@ -4,16 +4,12 @@ import fs from "fs";
 
 export const fileValidation = {
   images:["image/png" , "image/jpeg" ,"image/jpg"],
-  videos:["video/mp4" , "video/mj2" , "video/mpeg"],
-  audios: ["audio/webm" ,"audio/x-pn-realaudio-plugin"],
-  documents:["application/pdf" , "application/msword"],
  }
 
 export const localFileUpload=({customPath = 'general' ,validation = []})=>{
   const basePath = `Uploads/${customPath}`
  const storage=multer.diskStorage({
   destination :(req,file,cb) =>{
-   //cb(null ,path.resolve("./src/Uploads"))
    let userBasePath = basePath;
    if(req.user?._id) userBasePath += `/${req.user?._id}`
    const fullPath = path.resolve(`./src/${userBasePath}`);
@@ -40,4 +36,3 @@ export const localFileUpload=({customPath = 'general' ,validation = []})=>{
   return multer({fileFilter , storage});
 }
 
-//signatuare  ----> magic number

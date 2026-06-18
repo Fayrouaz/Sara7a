@@ -10,7 +10,7 @@ export const cloudFileUploadMulter=({validation = []})=>{
    if(validation.includes(file.mimetype)){
     cb(null , true);
    }else {
-    cb(new Error("Invalid File Type") , fasle)
+    cb(new Error("Invalid File Type") , false)
    }
  }
 

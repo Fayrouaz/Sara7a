@@ -17,7 +17,7 @@ export async function sendEmails({
     },
   });
   const info = await transporter.sendMail({
-    from: `"Route Academy🟢" <${process.env.EMAIL}>`,
+    from: `"Leaf Detect🟢" <${process.env.EMAIL}>`,
     to,
     subject,
     text,
@@ -29,7 +29,7 @@ export async function sendEmails({
   console.log("Message sent:", info.messageId);
 }
 export const emailSubject = {
-  confirmEmail: "Confirm Your Email",
+ 
   resetPassword: "Reset Your Password",
-  welcome: "Welcome to Route Academy",
+  welcome: "Welcome to Leaf Detect",
 };
